@@ -16,7 +16,7 @@ KERNELID=$(uname -r)
 arr=($(tr -d '\0' </proc/device-tree/model))
 BOARD_NAME="R${arr[@]:1:2}"
 toilet -f standard -d /etc/update-motd.d $(echo $BOARD_NAME)
-echo -e "\nWelcome to \e[0;91mRaspiOS ${VERSION}\x1B[0m with \e[0;91mLinux $KERNELID\x1B[0m\n"
+echo -e "Welcome to \e[0;91mRaspiOS ${VERSION}\x1B[0m with \e[0;91mLinux $KERNELID\x1B[0m\n"
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 # don't change default values - they are lost on upgrades. Use /etc/default/armbian-motd for your values
@@ -31,11 +31,9 @@ CPU_TEMP_OFFSET=0
 
 function display() {
 	# $1=name $2=value $3=red_limit $4=minimal_show_limit $5=unit $6=after $7=acs/desc{
-	# battery red color is opposite, lower number
-	if [[ "$1" == "Battery" ]]; then local great="<"; else local great=">"; fi
 	if [[ -n "$2" && "$2" -gt "0" && (( "${2%.*}" -ge "$4" )) ]]; then
 		printf "%-14s" "$1:"
-		if awk "BEGIN{exit ! ($2 $great $3)}"; then echo -ne "\e[0;91m $2"; else echo -ne "\e[0;92m $2"; fi
+		if awk "BEGIN{exit ! ($2 > $3)}"; then echo -ne "\e[0;91m $2"; else echo -ne "\e[0;92m $2"; fi
 		printf "%-1s\x1B[0m" "$5"
 		printf "%-11s\t" "$6"
 		return 1
@@ -131,50 +129,4 @@ display "CPU temp" "$board_temp" $CPU_TEMP_LIMIT "0" "°C" ""
 display "Usage of /" "$root_usage" "90" "1" "%" " of $root_total"
 echo "" # fixed newline
 a=0
-(( $a > 0 )) && echo "" # new line only if some value is displayed
-
-line=0
-if [[ -n "$PRIMARY_INTERFACE" ]] && vnstat -i "$PRIMARY_INTERFACE" &> /dev/null; then
-	traffic=$(vnstat -i $PRIMARY_INTERFACE --oneline | cut -d";" -f4,5)
-	traffic_rx=$(echo $traffic | cut -d";" -f1,1 | sed -r 's/([0-9]+\.[0-9]{1})[0-9]*/\1/')
-	traffic_tx=$(echo $traffic | cut -d";" -f2,2 | sed -r 's/([0-9]+\.[0-9]{1})[0-9]*/\1/')
-	[[ "$traffic" == *"Not enough"* ]] && { traffic_tx="n/a	"; traffic_rx="n/a	"; }
-	case $PRIMARY_DIRECTION in
-		tx)
-			printf "TX today:      \x1B[92m%s\x1B[0m  \t"  "$traffic_tx"
-			line=$((line+1))
-		;;
-		rx)
-			printf "RX today:      \x1B[92m%s\x1B[0m  \t"  "$traffic_rx"
-			line=$((line+1))
-		;;
-		both)
-			printf "TX today:      \x1B[92m%s\x1B[0m  \t"  "$traffic_tx"
-			printf "RX today:      \x1B[92m%s\x1B[0m  \t"  "$traffic_rx"
-			line=$((line+1))
-		;;
-		*) #off or whatever
-		;;
-	esac
-fi
-
-if [[ $(command -v zpool) ]]; then
-	zpoolstatus="$(zpool status </dev/stdin 2>&1 )"
-	if [[ -n $(echo $zpoolstatus | grep 'not loaded') ]]; then
-	:
-	elif [[ -n $(echo $zpoolstatus | grep 'degraded\|OFFLINE') ]]; then
-		printf "ZFS pool:      "
-		echo -ne "\e[0;91mDegraded\x1B[0m"
-		line=$((line+1))
-	elif [[ -n $(echo $zpoolstatus | grep 'no pools available') ]]; then
-		printf "ZFS pool:      "
-		echo -ne "n/a"
-		line=$((line+1))
-	else
-		printf "ZFS pool:      "
-		echo -ne "\e[0;92mOnline\x1B[0m"
-		line=$((line+1))
-	fi
-fi
-[[ $line -ne 0 ]] && echo ""
 echo ""
