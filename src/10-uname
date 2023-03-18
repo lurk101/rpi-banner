@@ -15,7 +15,7 @@
 KERNELID=$(uname -r)
 arr=($(tr -d '\0' </proc/device-tree/model))
 BOARD_NAME="R${arr[@]:1:2}"
-toilet -f standard -d /etc/update-motd.d $(echo $BOARD_NAME)
+toilet -f standard -F metal -d /etc/update-motd.d $(echo $BOARD_NAME)
 echo -e "Welcome to \e[0;91mRaspiOS ${VERSION}\x1B[0m with \e[0;91mLinux $KERNELID\x1B[0m\n"
 
 export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
